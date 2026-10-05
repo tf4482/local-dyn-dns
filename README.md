@@ -1,104 +1,107 @@
-# {{Project Name}} 🚀
+# 🌐 local-dyn-dns
 
-{{Briefly describe what this project does, who it is for, and which problem it solves.}}
+One-shot Linux CLI that reads eligible hosts from PostgreSQL and synchronizes `A`/`AAAA` records in an
+existing [Technitium DNS Server](https://technitium.com/dns/) zone through its HTTP API. PostgreSQL is
+only read. Ships as a single static binary.
 
-## Features ✨
+## ✨ Features
 
-- **{{Feature 1}}**: {{Describe the feature and its benefit.}}
-- **{{Feature 2}}**: {{Describe the feature and its benefit.}}
-- **{{Feature 3}}**: {{Describe the feature and its benefit.}}
+- 🔄 **Sync**: creates, updates, or leaves each record unchanged, then confirms the result via the API.
+- 🧭 **Record type**: IPv4 selects `A`, IPv6 selects `AAAA`; the other family is preserved.
+- 🥇 **Priority**: repeated exact addresses compete by numeric priority; the highest wins.
+- ⚖️ **Ambiguity detection**: ties with different IPs and conflicting case or trailing-dot variants are
+  skipped and fail the run.
+- 🛑 **Never deletes**: inactive or missing rows leave DNS untouched; CNAME conflicts and names outside
+  the zone are skipped as errors.
+- ⚡ **Concurrent**: bounded parallelism with a hard deadline per name; failures are isolated.
+- 🔁 **Failover**: up to three backup databases, tried in order when the primary is unreachable.
+- 🔒 **Secrets**: token sent as bearer header only; passwords and token are redacted from output.
+- 📝 **First run**: creates a user-only config template.
+- 🌈 **Output**: colored with emojis; plain when redirected or `NO_COLOR` is set.
 
-## Prerequisites 📋
+## 📦 Install
 
-- {{Required language or runtime and supported version}}
-- {{Required package manager or build tools}}
-- {{Additional services or accounts, if applicable}}
+Building needs Go 1.26+. Running needs PostgreSQL access and Technitium DNS Server 15+.
 
-## Installation 🚀
-
-1. Clone the repository:
-
-   ```bash
-   git clone https://github.com/{{username}}/{{repository}}.git
-   cd {{repository}}
-   ```
-
-2. Install the required dependencies:
-
-   ```text
-   {{install command}}
-   ```
-
-3. Configure the project as described below.
-
-## Configuration ⚙️
-
-{{Describe where configuration is stored and how to create a local configuration from the provided example, if applicable.}}
-
-| Setting | Description | Default |
-| --- | --- | --- |
-| `{{SETTING_1}}` | {{Purpose of this setting}} | `{{default value}}` |
-| `{{SETTING_2}}` | {{Purpose of this setting}} | `{{default value}}` |
-
-## Usage 🖥️
-
-Start the project:
-
-```text
-{{start command}}
+```bash
+git clone https://github.com/tf4482/local-dyn-dns.git
+cd local-dyn-dns
+CGO_ENABLED=0 go build -trimpath -ldflags "-s -w" -o dist/local-dyn-dns .
+sudo install -m 755 dist/local-dyn-dns /usr/local/bin/local-dyn-dns
 ```
 
-### Example
+## 🗄️ Database
 
-{{Describe a typical use case.}}
+`public.hosts` needs these columns; the role needs only `CONNECT`, schema `USAGE`, and table `SELECT`.
 
-```text
-{{example command or code}}
-```
-
-{{Describe the expected result.}}
-
-## Project Structure 📁
-
-{{Adapt the following structure to your project.}}
-
-| Path | Purpose |
+| Column | Meaning |
 | --- | --- |
-| `src/` | Application source code |
-| `tests/` | Automated tests |
-| `docs/` | Additional documentation |
-| `assets/` | Static resources |
-| `.gitignore` | Git ignore rules |
-| `README.md` | Project documentation |
-| `LICENSE` | License terms |
+| `status` | Boolean or text `true`/`false`; `NULL` and false rows are inactive |
+| `ip` | IPv4 or IPv6 target |
+| `address` | Concrete DNS host name; URLs, paths, and wildcards are rejected |
+| `priority` | Numeric precedence for repeated exact addresses; ignored for unique ones |
 
-## Development 🔧
+Invalid rows are reported and skipped without failing the run.
 
-{{Describe any additional setup required for local development.}}
+## ⚙️ Configuration
 
-Run the tests:
+The first existing file is used, without merging:
 
-```text
-{{test command}}
+1. `config.yml` beside the executable
+2. `~/.config/local-dyn-dns/config.yml`
+
+If neither exists, the second one is created with dummy values and the run exits `1`. See
+[`config.example.yml`](config.example.yml):
+
+| Setting | Description |
+| --- | --- |
+| `database.host`, `port`, `name`, `user`, `password` | Primary PostgreSQL target |
+| `database.backups` | Optional list of up to three failover targets with the same keys |
+| `technitium.base_url` | HTTP(S) base URL; HTTPS certificates are verified |
+| `technitium.api_token` | Token with **View** and **Modify** permission on the zone |
+| `technitium.zone` | Existing zone; it is never created or deleted |
+| `technitium.ttl_seconds` | TTL of the synchronized records |
+| `settings.dns_concurrency` | Names synchronized in parallel |
+| `settings.dns_timeout_seconds` | Hard deadline for all requests of one name |
+
+## 🚀 Usage
+
+```bash
+local-dyn-dns
+local-dyn-dns --help   # also: -h, help
 ```
 
-Build the project, if applicable:
+| Exit | Meaning |
+| --- | --- |
+| `0` | Every eligible name matched or synchronized, including empty or inactive-only tables |
+| `1` | Configuration, ambiguity, database, API, conflict, or timeout error |
+| `130` | Interrupted by the user |
 
-```text
-{{build command}}
+A timeout after a write began reports that the final DNS state is uncertain.
+
+## ⏱️ Deploy
+
+Install the binary, place the configuration, then schedule it with the example systemd units:
+
+```bash
+sudo install -m 644 local-dyn-dns.example.service /etc/systemd/system/local-dyn-dns.service
+sudo install -m 644 local-dyn-dns.example.timer /etc/systemd/system/local-dyn-dns.timer
+sudo systemctl daemon-reload
+sudo systemctl enable --now local-dyn-dns.timer
+journalctl -u local-dyn-dns.service
 ```
 
-## Contributing 🤝
+Adjust `User=` in the service; that account needs `~/.config/local-dyn-dns/config.yml`.
 
-Contributions are welcome! Open an issue to report a bug or suggest an improvement.
+## 🧪 Develop
 
-To contribute code:
+Tests need no live services and never change DNS:
 
-1. Fork the repository and create a branch.
-2. Make your changes and update relevant tests and documentation.
-3. Run the available checks.
-4. Submit a pull request describing your changes.
+```bash
+go vet ./...
+go test ./...
+```
 
-## License 📜
+## 📜 License
 
-This project is licensed under the {{License Name}}. See the [LICENSE](LICENSE) file for details.
+MIT, see [LICENSE](LICENSE).
