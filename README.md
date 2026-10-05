@@ -50,8 +50,10 @@ The first existing file is used, without merging:
 1. `config.yml` beside the executable
 2. `~/.config/local-dyn-dns/config.yml`
 
-If neither exists, the second one is created with dummy values and the run exits `1`. See
-[`config.example.yml`](config.example.yml):
+If neither exists, the second one is created with dummy values and the run exits `1`. Copy
+[`config.yml.example`](config.yml.example) to `config.yml` beside the executable, or use the
+automatically created template. The same example is also available as
+[`config.example.yml`](config.example.yml).
 
 | Setting | Description |
 | --- | --- |
