@@ -1,0 +1,21 @@
+database:
+  # Shared connection settings; reuse across projects if the role has required table permissions.
+  host: "127.0.0.1"
+  port: 5432
+  name: "monitoring"
+  user: "monitoring"
+  password: "CHANGE_ME"
+
+  # Optional ordered failover targets; at most three.
+  # Each needs host, port, name, user, and password; all use public.hosts.
+  backups: []
+
+technitium:
+  base_url: "http://127.0.0.1:5380"
+  api_token: "CHANGE_ME"
+  zone: "CHANGE_ME"
+  ttl_seconds: 60
+
+settings:
+  dns_concurrency: 8
+  dns_timeout_seconds: 5

@@ -1,0 +1,11 @@
+[Unit]
+Description=Adjusting DNS entrys
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=user0
+ExecStart=/usr/local/bin/local-dyn-dns
+TimeoutStartSec=2min
+PrivateTmp=yes

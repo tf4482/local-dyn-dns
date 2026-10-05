@@ -1,0 +1,11 @@
+[Unit]
+Description=Timing DNS entry adjustments
+
+[Timer]
+OnBootSec=10s
+OnUnitInactiveSec=10s
+AccuracySec=100ms
+RandomizedDelaySec=0
+
+[Install]
+WantedBy=timers.target
